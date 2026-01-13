@@ -1,6 +1,7 @@
 
 
 import pickle
+from tqdm import tqdm
 
 merges_unit = tuple[int, int]
 
@@ -154,7 +155,12 @@ class BPETrainer:
         
         
         # Start iterations
-        for _ in range(num_iterations):
+        shower = tqdm(total=num_iterations, desc="now Processing merges", unit="times")
+        update_interval = max(1, num_iterations // 100)
+        for i in range(num_iterations):
+            if i % update_interval == 0:
+                shower.update(update_interval)  
+                
             # Get the most frequent merges unit
             most_frequent_merges_unit, frequency = self.merges_unit_choise_frequency_heap.pop_max_frequency_merges_unit()
             

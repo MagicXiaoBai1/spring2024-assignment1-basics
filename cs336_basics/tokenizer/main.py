@@ -50,4 +50,15 @@ def train_bpe(
     
 
 if __name__ == "__main__":
-    pass
+    special_tokens = ["<|endoftext|>"]
+    bpe_trainer = BPETrainer(32000, special_tokens)
+    input_path = "data/TinyStoriesV2-GPT4-train.txt"
+    input_path = "/home/love/python_code/spring2024-assignment1-basics/output/owt_train.txt_word_counts_train.pkl"
+
+    with open(input_path, "rb") as f:
+        word_counts = pickle.load(f)
+    
+    res = bpe_trainer.train(word_counts)
+    
+    with open(input_path.replace(".pkl", "_res.pkl"), "wb") as f:
+        pickle.dump(res, f)
