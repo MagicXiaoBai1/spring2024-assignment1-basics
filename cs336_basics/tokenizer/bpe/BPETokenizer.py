@@ -1,14 +1,14 @@
-
 from typing import Iterator, Iterable
-from concurrent.futures import ThreadPoolExecutor
+import heapq
 
 from cs336_basics.tokenizer.text_inputStream import InputStreamFromString, InputStreamFromStringIter
+from concurrent.futures import ProcessPoolExecutor
 
 
 class BPETokenizer:
     def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: list[str] | None = None):
         self.vocab = vocab
-        self.merges = merges
+        self.merges = {(a, b): idx for idx, (a, b) in enumerate(merges)}
         self.bytes2token_id = {v: k for k, v in vocab.items()}
         max_token_id = max(vocab.keys(), default=-1)
         self.special_tokens = special_tokens or []
@@ -30,11 +30,34 @@ class BPETokenizer:
         return self._encode_tokens_stream(InputStreamFromStringIter(iterable, self.special_tokens))
 
     def _encode_tokens_stream(self, stream: Iterable[str]) -> Iterator[int]:
-        with ThreadPoolExecutor(max_workers=22) as ex:
-            # ex.map 会按输入顺序产出结果（即使内部并行）
-            for encoded in ex.map(self._encode_one_token2, stream, chunksize=128):
-                yield from encoded
-        pass
+        from concurrent.futures import ThreadPoolExecutor
+        from collections import deque
+        
+        with ThreadPoolExecutor(max_workers=22) as executor:
+            futures_queue = deque()
+            max_queue_size = 220  # 控制同时提交的任务数，避免内存占用过大
+            
+            stream_iter = iter(stream)
+            exhausted = False
+            
+            while True:
+                # 填充队列到最大容量
+                while len(futures_queue) < max_queue_size and not exhausted:
+                    try:
+                        token = next(stream_iter)
+                        future = executor.submit(self._encode_one_token2, token)
+                        futures_queue.append(future)
+                    except StopIteration:
+                        exhausted = True
+                        break
+                
+                # 如果队列为空且输入已耗尽，结束
+                if not futures_queue:
+                    break
+                
+                # 按顺序取出最早提交的结果并yield
+                future = futures_queue.popleft()
+                yield from future.result()
 
     def _encode_one_token(self, word: str) -> list[int]:
         """
@@ -64,15 +87,23 @@ class BPETokenizer:
         for i in word.encode('utf-8'):
             utf8_word.append(bytes([i]))
 
-        is_can_merage = len(utf8_word) > 1
-        while is_can_merage and len(utf8_word) > 1:
-            is_can_merage = False
-            for merage_a, merage_b in self.merges:
-                for i in range(len(utf8_word) - 2, -1, -1):
-                    if utf8_word[i] == merage_a and utf8_word[i + 1] == merage_b:
-                        utf8_word[i] = utf8_word[i] + utf8_word[i + 1]
-                        del utf8_word[i + 1]
-                        is_can_merage = True
+        while len(utf8_word) > 1:
+            # 找合并方案
+            merage_idx = -1
+            merage_order = float('inf')
+            for i in range(len(utf8_word) - 1):
+                now_pair = (utf8_word[i], utf8_word[i + 1])
+                now_pair_order = self.merges.get(now_pair, float('inf'))
+                if now_pair_order < merage_order:
+                    merage_order = now_pair_order
+                    merage_idx = i
+            
+            if merage_idx != -1:
+                utf8_word[merage_idx] = utf8_word[merage_idx] + utf8_word[merage_idx + 1]
+                del utf8_word[merage_idx + 1]
+            else:
+                break
+            
         res = []
         for bytes1 in utf8_word:
             res.append(self.bytes2token_id[bytes1])
@@ -80,8 +111,6 @@ class BPETokenizer:
 
     def decode(self, ids: list[int]) -> str:
         res = b""
-        with ThreadPoolExecutor(max_workers=8) as ex:
-            # ex.map 会按输入顺序产出结果（即使内部并行）
-            for decoded in ex.map(lambda x: self.vocab[x], ids, chunksize=128):
-                res = res + decoded
+        for decoded in map(lambda x: self.vocab[x], ids):
+            res = res + decoded
         return res.decode('utf-8', errors='replace')
