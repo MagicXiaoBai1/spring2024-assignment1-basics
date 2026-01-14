@@ -43,3 +43,35 @@ gunzip owt_valid.txt.gz
 cd ..
 ```
 
+Created： 2y ago
+Runtime： 1h 24m 56s
+Sweep： -
+activation： silu
+batch_size： 128
+checkpoint_interval： 10000
+checkpoint_path： checkpoints/
+compile： true
+context_length： 512
+d_ff： 4096
+d_model： 1024
+d_vocab_size： -
+dataset： owt
+decay： 0.2
+flash： -
+log_interval： 100
+lr： 0.0004
+name： -
+num_heads： 16
+num_layer： 12
+parallel_layers： false
+post_norm： false
+rotary： true
+tie_embeddings： true
+total_steps： 30000
+use_gated_mlp： true
+use_sophia： -
+loss/train： 3.18867
+loss/valid： 3.22499
+lr： 0.00018721
+perplexity/train： 24.25607
+perplexity/： 25.15326
