@@ -1,38 +1,21 @@
-from collections import defaultdict
 import pickle
 import os
 from tqdm import tqdm
 import logging
 
-from cs336_basics.tokenizer.word_counts_generator.sub_step.MMapReaderStream import MMapReaderStream, FileReaderStream
-from cs336_basics.tokenizer.word_counts_generator.sub_step.UTF8TextStream import UTF8TextStream
-from cs336_basics.tokenizer.word_counts_generator.sub_step.Test2SampleStream import Test2SampleStream
-from cs336_basics.tokenizer.word_counts_generator.sub_step.GPT2TokenStream import GPT2TokenStream
-
+from cs336_basics.tokenizer.text_inputStream import FullInputStream
 logger = logging.getLogger(__name__)
 
 def generate_word_counts(file_path: str, output_path: str, special_tokens: list[str] = []):
-    if len(special_tokens) > 0:
-        endingToken = special_tokens[0]
-    else:
-        endingToken = "<|endoftext|>"
-    # 构建流水线 🌊
-    # reader = MMapReaderStream(file_path)
-    reader = FileReaderStream(file_path)
-    utf8_stream = UTF8TextStream(reader)
-    test2_sample_stream = Test2SampleStream(utf8_stream, endingToken)
-    token_stream = GPT2TokenStream(test2_sample_stream, special_tokens=special_tokens)
-    
-    # 估算总token数：根据经验，英文文本平均每个token约3-4个字节
-    file_size = os.path.getsize(file_path)
-    estimated_tokens = file_size // 3  # 保守估计
+
+    token_stream = FullInputStream(file_path, special_tokens)
     
     word_count = {}
-    shower =  tqdm(total=reader.total_bytes, desc="Processing tokens", unit="tokens")
+    shower =  tqdm(total=token_stream.get_total_bytes(), desc="Processing tokens", unit="tokens")
     pre_bytes = 0
     for token in token_stream:
-        shower.update(reader.now_bytes - pre_bytes)
-        pre_bytes = reader.now_bytes
+        shower.update(token_stream.get_now_bytes() - pre_bytes)
+        pre_bytes = token_stream.get_now_bytes()
 
         word_count[token] = word_count.get(token, 0) + 1
     shower.close()

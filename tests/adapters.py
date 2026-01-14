@@ -7,6 +7,7 @@ from typing import IO, BinaryIO, Iterable, Optional, Type
 import numpy.typing as npt
 import torch
 
+from cs336_basics.tokenizer.bpe.BPETokenizer import BPETokenizer
 from cs336_basics.tokenizer.main import train_bpe
 
 
@@ -538,7 +539,7 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    raise NotImplementedError
+    return BPETokenizer(vocab, merges, special_tokens)
 
 
 def run_train_bpe(

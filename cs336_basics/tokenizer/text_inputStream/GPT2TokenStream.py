@@ -15,11 +15,14 @@ class GPT2TokenStream:
         
 
     def __iter__(self) -> Iterator[str]:
-        for chunk in self.text_chunks:            
-            sub_chunks = re.split(f"({'|'.join(map(re.escape, self.special_tokens))})", chunk)
+        for chunk in self.text_chunks:
+            if len(self.special_tokens) == 0:
+                sub_chunks = [chunk]
+            else:
+                sub_chunks = re.split(f"({'|'.join(map(re.escape, self.special_tokens))})", chunk)
             for sub_chunk in sub_chunks:
-                if chunk in self.special_tokens_set:
-                    yield chunk
+                if sub_chunk in self.special_tokens_set:
+                    yield sub_chunk
                     continue
                 # 分词并 yield
                 for match in re.finditer(GPT2_REGEX, sub_chunk):

@@ -3,7 +3,7 @@
 import pickle
 from tqdm import tqdm
 
-merges_unit = tuple[int, int]
+MergesUnit = tuple[int, int]
 
 class BPETrainer:
     
@@ -12,17 +12,17 @@ class BPETrainer:
 
         def __init__(self,a_is_bigger_than_b_merges_unit=None):
             self.a_is_bigger_than_b_merges_unit = a_is_bigger_than_b_merges_unit
-            self.merges_unit_choise_frequency_heap: list[tuple[int, merges_unit]] = []
-            self.merges_unit2frequency_heap_index: dict[merges_unit, int] = {}
+            self.merges_unit_choise_frequency_heap: list[tuple[int, MergesUnit]] = []
+            self.merges_unit2frequency_heap_index: dict[MergesUnit, int] = {}
         
-        def insert_merges_unit(self, merges_unit: merges_unit, frequency: int):
+        def insert_merges_unit(self, merges_unit: MergesUnit, frequency: int):
             self.merges_unit_choise_frequency_heap.append((frequency, merges_unit))
             self.merges_unit2frequency_heap_index[merges_unit] = len(self.merges_unit_choise_frequency_heap) - 1
             self.__heapify_up(len(self.merges_unit_choise_frequency_heap) - 1)
         
         
         
-        def update_merges_unit(self, merges_unit: merges_unit, frequency: int):
+        def update_merges_unit(self, merges_unit: MergesUnit, frequency: int):
             
             if merges_unit not in self.merges_unit2frequency_heap_index:
                 self.insert_merges_unit(merges_unit, frequency)
@@ -34,10 +34,10 @@ class BPETrainer:
             self.__heapify_down(frequency_heap_index)
         
         
-        def _delete_merges_unit(self, merges_unit: merges_unit):
+        def _delete_merges_unit(self, merges_unit: MergesUnit):
             del self.merges_unit2frequency_heap_index[merges_unit]
         
-        def pop_max_frequency_merges_unit(self) -> tuple[merges_unit, int]:
+        def pop_max_frequency_merges_unit(self) -> tuple[MergesUnit, int]:
                         
             max_frequency, max_frequency_merges_unit = self.merges_unit_choise_frequency_heap[0]            
             del self.merges_unit2frequency_heap_index[max_frequency_merges_unit]
@@ -47,13 +47,13 @@ class BPETrainer:
         
             return max_frequency_merges_unit, max_frequency
         
-        def get_frequency(self, merges_unit: merges_unit) -> int | None:
+        def get_frequency(self, merges_unit: MergesUnit) -> int | None:
             if merges_unit not in self.merges_unit2frequency_heap_index:
                 return 0
             frequency_heap_index = self.merges_unit2frequency_heap_index[merges_unit]
             return self.merges_unit_choise_frequency_heap[frequency_heap_index][0]
         
-        def a_is_bigger_than_b (self, a: tuple[int, merges_unit], b: tuple[int, merges_unit]) -> bool:
+        def a_is_bigger_than_b (self, a: tuple[int, MergesUnit], b: tuple[int, MergesUnit]) -> bool:
             if a[0] > b[0]:
                 return True
             elif a[0] < b[0]:
@@ -115,7 +115,7 @@ class BPETrainer:
 
         
         # 单次迭代用到的数据结构
-        self.merges_unit2words: dict[merges_unit, list[int]] = {} # 加速用的，不用完全准确的，只要不漏
+        self.merges_unit2words: dict[MergesUnit, list[str]] = {} # 加速用的，不用完全准确的，只要不漏
         self.merges_unit_choise_frequency_heap: BPETrainer.MergesUnitChoiceFrequencyHeap
         self.bytes2token_id: dict[bytes, int] = {v: k for k, v in self.vocab.items()}
     
@@ -135,7 +135,7 @@ class BPETrainer:
             
         
         # Init merges_unit2count and merges_unit2words
-        merges_unit2count: dict[merges_unit, int] = {}
+        merges_unit2count: dict[MergesUnit, int] = {}
         for word, count in word_count.items():
             bytes_word = word.encode('utf-8')
             for i in range(len(bytes_word) - 1):
@@ -157,8 +157,8 @@ class BPETrainer:
         # Start iterations
         shower = tqdm(total=num_iterations, desc="now Processing merges", unit="times")
         update_interval = max(1, num_iterations // 100)
-        for i in range(num_iterations):
-            if i % update_interval == 0:
+        for iteration in range(num_iterations):
+            if iteration % update_interval == 0:
                 shower.update(update_interval)  
                 
             # Get the most frequent merges unit
@@ -216,7 +216,7 @@ class BPETrainer:
         return self.vocab, self.merges
 
 
-    def a_is_bigger_than_b_merges_unit (self, a:merges_unit, b:merges_unit) -> bool:
+    def a_is_bigger_than_b_merges_unit (self, a:MergesUnit, b:MergesUnit) -> bool:
         if self.vocab[a[0]] > self.vocab[b[0]]:
             return True
         elif self.vocab[a[0]] < self.vocab[b[0]]:
@@ -227,7 +227,7 @@ class BPETrainer:
     
     def _cleanup_iteration_data(self):
         self.merges_unit_choise_frequency_heap = BPETrainer.MergesUnitChoiceFrequencyHeap(self.a_is_bigger_than_b_merges_unit)
-        self.merges_unit2words: dict[merges_unit, list[str]] = {} 
+        self.merges_unit2words: dict[MergesUnit, list[str]] = {}
     
     
 

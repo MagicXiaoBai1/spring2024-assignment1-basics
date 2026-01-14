@@ -8,7 +8,7 @@ def is_chunk_complete_utf8(chunk: bytes) -> bool:
     except UnicodeDecodeError:
         return False
 
-class UTF8TextStream:
+class UTF8DecodeStream:
     """将 bytes 块流转换为 UTF-8 文本块流（自动处理跨块字符）"""
 
     def __init__(self, byte_chunks: Iterable[bytes]):

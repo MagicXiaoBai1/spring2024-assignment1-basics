@@ -6,6 +6,7 @@ import pickle
 
 from cs336_basics.tokenizer.bpe.bpe_trainer import BPETrainer
 from cs336_basics.tokenizer.word_counts_generator.word_counts_generator import generate_word_counts
+import subprocess
 logger = logging.getLogger(__name__)
 
 
@@ -48,8 +49,7 @@ def train_bpe(
     return bpe_trainer.train(word_counts)
     
     
-
-if __name__ == "__main__":
+def run_train():
     special_tokens = ["<|endoftext|>"]
     bpe_trainer = BPETrainer(32000, special_tokens)
     input_path = "data/TinyStoriesV2-GPT4-train.txt"
@@ -62,3 +62,13 @@ if __name__ == "__main__":
     
     with open(input_path.replace(".pkl", "_res.pkl"), "wb") as f:
         pickle.dump(res, f)
+
+
+if __name__ == "__main__":
+    print(subprocess.check_output(['pwd']).decode().strip())
+    
+    with open("./output/TinyStoriesV2_res.pkl", "rb") as f:
+    # with open("./output/owt_train.txt_word_counts_train_res.pkl", "rb") as f:
+        res = pickle.load(f)
+    print(res[0])
+    print("Done")
