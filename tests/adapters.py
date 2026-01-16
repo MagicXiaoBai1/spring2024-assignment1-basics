@@ -13,6 +13,7 @@ from cs336_basics.llm_module.position_wise_ffn import PositionWiseFeedForwardNet
 from cs336_basics.llm_module.rmsnorm import RMSNorm
 from cs336_basics.llm_module.scaled_dot_product_attention import scaled_dot_product_attention
 from cs336_basics.llm_module.softmax import my_softmax
+from cs336_basics.llm_module.transformer_block import TransformerBlock
 from cs336_basics.tokenizer.bpe.BPETokenizer import BPETokenizer
 from cs336_basics.tokenizer.main import train_bpe
 
@@ -229,7 +230,23 @@ def run_transformer_block(
         FloatTensor of shape (batch_size, sequence_length, d_model) with the output of
         running the Transformer block on the input features.
     """
-    raise NotImplementedError
+
+    transformer_block = TransformerBlock(d_model, d_ff, num_heads, attn_pdrop=attn_pdrop, residual_pdrop=residual_pdrop)
+
+    transformer_block.feed_forward_network.hidden_inner.weight = torch.nn.Parameter(weights['ffn.w1.weight'])
+    transformer_block.feed_forward_network.hidden_outer.weight = torch.nn.Parameter(weights['ffn.w2.weight'])
+
+    transformer_block.norm_for_attention.weight = torch.nn.Parameter(weights['ln1.weight'])
+    transformer_block.norm_for_ffn.weight = torch.nn.Parameter(weights['ln2.weight'])
+
+    transformer_block.attention_block.Wq.weight = torch.nn.Parameter(weights['attn.q_proj.weight'])
+    transformer_block.attention_block.Wk.weight = torch.nn.Parameter(weights['attn.k_proj.weight'])
+    transformer_block.attention_block.Wv.weight = torch.nn.Parameter(weights['attn.v_proj.weight'])
+    transformer_block.attention_block.Wo.weight = torch.nn.Parameter(weights['attn.output_proj.weight'])
+
+    mask = torch.triu(torch.ones(in_features.size(1), in_features.size(1), dtype=torch.bool), diagonal=1)
+    mask = mask.unsqueeze(0).unsqueeze(1)  # (1,
+    return transformer_block.forward(in_features, mask)
 
 
 def run_transformer_lm(
