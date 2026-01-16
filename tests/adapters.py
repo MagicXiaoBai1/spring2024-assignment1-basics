@@ -8,8 +8,10 @@ import numpy.typing as npt
 import torch
 
 from cs336_basics.llm_module.activation_function import gaussian_error_linear_units
+from cs336_basics.llm_module.multihead_self_attention import multihead_self_attention
 from cs336_basics.llm_module.position_wise_ffn import PositionWiseFeedForwardNetwork
 from cs336_basics.llm_module.rmsnorm import RMSNorm
+from cs336_basics.llm_module.scaled_dot_product_attention import scaled_dot_product_attention
 from cs336_basics.llm_module.softmax import my_softmax
 from cs336_basics.tokenizer.bpe.BPETokenizer import BPETokenizer
 from cs336_basics.tokenizer.main import train_bpe
@@ -105,7 +107,7 @@ def run_scaled_dot_product_attention(
         with the output of running your scaled dot product attention
         implementation with the provided key, query, and value tensors.
     """
-    raise NotImplementedError
+    return scaled_dot_product_attention(K, Q, V, mask, pdrop)
 
 
 def run_multihead_self_attention(
@@ -155,7 +157,7 @@ def run_multihead_self_attention(
         torch.FloatTensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    return multihead_self_attention(d_model, num_heads, attn_pdrop, weights, in_features)
 
 
 def run_transformer_block(
