@@ -16,6 +16,11 @@ from cs336_basics.llm_module.softmax import my_softmax
 from cs336_basics.llm_module.transformer_block import TransformerBlock
 from cs336_basics.tokenizer.bpe.BPETokenizer import BPETokenizer
 from cs336_basics.tokenizer.main import train_bpe
+from cs336_basics.train.gradient_clipping import gradient_clipping
+from cs336_basics.train.learning_rate_schedule import LearningRateSchedule
+from cs336_basics.train.loss import cross_entropy
+from cs336_basics.train.optimizers import AdamW
+from cs336_basics.transformer_language_model.transformer_language_model_one import TransformerLanguageModelOne
 
 
 def run_positionwise_feedforward(
@@ -339,7 +344,31 @@ def run_transformer_lm(
         FloatTensor of shape (batch size, sequence_length, vocab_size) with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    main_module = TransformerLanguageModelOne(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, attn_pdrop, residual_pdrop)
+
+    # Embeddings
+    main_module.token_embeddings.weight = torch.nn.Parameter(weights['token_embeddings.weight'])
+    main_module.position_embeddings.pe = torch.nn.Parameter(weights['position_embeddings.weight'])
+
+    # Transformer layers
+    for i in range(num_layers):
+        layer = main_module.layers[i]
+        layer.feed_forward_network.hidden_inner.weight = torch.nn.Parameter(weights[f'layers.{i}.ffn.w1.weight'])
+        layer.feed_forward_network.hidden_outer.weight = torch.nn.Parameter(weights[f'layers.{i}.ffn.w2.weight'])
+
+        layer.norm_for_attention.weight = torch.nn.Parameter(weights[f'layers.{i}.ln1.weight'])
+        layer.norm_for_ffn.weight = torch.nn.Parameter(weights[f'layers.{i}.ln2.weight'])
+
+        layer.attention_block.Wq.weight = torch.nn.Parameter(weights[f'layers.{i}.attn.q_proj.weight'])
+        layer.attention_block.Wk.weight = torch.nn.Parameter(weights[f'layers.{i}.attn.k_proj.weight'])
+        layer.attention_block.Wv.weight = torch.nn.Parameter(weights[f'layers.{i}.attn.v_proj.weight'])
+        layer.attention_block.Wo.weight = torch.nn.Parameter(weights[f'layers.{i}.attn.output_proj.weight'])
+
+    # Final norm + LM head
+    main_module.ln_final.weight = torch.nn.Parameter(weights['ln_final.weight'])
+    main_module.lm_head.weight = torch.nn.Parameter(weights['lm_head.weight'])
+
+    return main_module.forward(in_indices)
 
 
 def run_rmsnorm(
@@ -449,7 +478,7 @@ def run_cross_entropy(inputs: torch.FloatTensor, targets: torch.LongTensor):
     Returns:
         Tensor of shape () with the average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    return cross_entropy(inputs, targets)
 
 
 def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float):
@@ -464,14 +493,14 @@ def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm:
     Returns:
         None
     """
-    raise NotImplementedError
+    return gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> Type[torch.optim.Optimizer]:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
-    raise NotImplementedError
+    return AdamW
 
 
 def run_get_lr_cosine_schedule(
@@ -504,8 +533,7 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
-
+    return LearningRateSchedule(max_learning_rate,min_learning_rate,warmup_iters,cosine_cycle_iters).get_lr(it)
 
 def run_save_checkpoint(
     model: torch.nn.Module,
